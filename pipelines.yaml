@@ -1,0 +1,43 @@
+trigger:
+- master
+
+resources:
+  pipelines:
+    - pipeline: buildContosoAir
+      source: dnoronha.ContosoAir
+
+pool:
+  vmImage: ubuntu-latest
+
+
+steps:
+
+- task: DownloadBuildArtifacts@0
+  inputs:
+    buildType: 'specific'
+    project: 
+    pipeline:
+    specificBuildWithTriggering: true
+    buildVersionToDownload: 'latest'
+    downloadType: 'single'
+    artifactName: 'drop'
+    downloadPath: '$(System.ArtifactsDirectory)'
+
+
+- task: AzureResourceManagerTemplateDeployment@3
+  displayName: 'ARM Template deployment: Resource Group scope'
+  inputs:
+    azureResourceManagerConnection: 'Daniella Azure Internal Readiness (7ce972d9-c0ec-4578-989b-5a18bb8cca4d)'
+    subscriptionId: '7ce972d9-c0ec-4578-989b-5a18bb8cca4d'
+    resourceGroupName: '$(resourcegroup)'
+    location: 'West US'
+    csmFile: '$(System.DefaultWorkingDirectory)/_noronhadaniella8.ContosoAir/drop/Templates/azuredeploy.json'
+    csmParametersFile: '$(System.DefaultWorkingDirectory)/_noronhadaniella8.ContosoAir/drop/Templates/azuredeploy.parameters.json'
+    overrideParameters: '-p_environment dnoronha'
+
+
+- task: AzureRmWebAppDeployment@4
+  displayName: 'Azure App Service Deploy: $(web)'
+  inputs:
+    azureSubscription: 'Daniella Azure Internal Readiness (7ce972d9-c0ec-4578-989b-5a18bb8cca4d)'
+    WebAppName: '$(web)'
